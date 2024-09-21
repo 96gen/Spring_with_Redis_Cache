@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: Book-Management-Project
+  datasource:
+
+    #MariaDB的連接的位置
+    url: jdbc:mariadb://localhost:3306/book
+
+    #選擇MariaDB的驅動程式
+    driver-class-name: org.mariadb.jdbc.Driver
+
+    #MariaDB預設的使用者名稱是root
+    username: root
+
+    #MariaDB的密碼
+    password: 12345678
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
