@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class BookService {
@@ -31,21 +32,22 @@ public class BookService {
 
     //根據提供的id編號在資料庫中尋找book
     public Book getBookById(Long id) {
-        String idString = String.valueOf(id);
-        //根據idString在Redis中找尋有沒有Cache
-        if (redisTemplate.opsForHash().hasKey(BOOK_CACHE, idString)) {
-            //從Redis中取得Cache的Book
-            Book cachedBook = (Book) redisTemplate.opsForHash().get(BOOK_CACHE, idString);
-            System.out.println("-----From Cache----: " + idString);//在Console顯示資料來自快取
+        String cacheKey = BOOK_CACHE + ":" + id;
+        //根據cacheKey在Redis中找尋有沒有Cache
+        Book cachedBook = (Book) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedBook != null) {
+            System.out.println("-----From Cache----: " + cacheKey);//在Console顯示資料來自快取
             return cachedBook;
         }
+
         //如果Cache miss，從資料庫取得Book
         Optional<Book> opt = bookRepository.findById(id);
         //Book存在，將Book的資料加入Cache
-        if(opt.isPresent()){
-            redisTemplate.opsForHash().put(BOOK_CACHE, idString, opt.get());
+        if (opt.isPresent()) {
+            redisTemplate.opsForValue().set(cacheKey, opt.get(), 30, TimeUnit.SECONDS);//設定30秒後過期
+            return opt.get();
         }
-        return opt.orElse(null);
+        return null;
     }
 
     //根據提供的id編號修改對應的book
@@ -57,7 +59,7 @@ public class BookService {
             updatedBook.setPage(book.getPage());
             String idString = String.valueOf(book.getId());
             //Book資料被變更，刪除過時的Cache
-            redisTemplate.opsForHash().delete(BOOK_CACHE, idString);
+            redisTemplate.delete(BOOK_CACHE + ":" + book.getId());
             return bookRepository.save(updatedBook);
         }
         return null;
@@ -69,6 +71,6 @@ public class BookService {
         opt.ifPresent(book -> bookRepository.deleteById(book.getId()));
         String idString = String.valueOf(id);
         //Book資料被刪除，刪除過時的Cache
-        redisTemplate.opsForHash().delete(BOOK_CACHE, idString);
+        redisTemplate.delete(BOOK_CACHE + ":" + id);
     }
 }
