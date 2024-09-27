@@ -18,6 +18,7 @@
 2. 使用提供的docker-compose.yml和Dockerfile，利用Docker完成編譯和執行
 可以使用以下指令來完成
 ```bash
+docker-compose build
 docker-compose up
 ```
 
